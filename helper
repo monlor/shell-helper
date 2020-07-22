@@ -1,7 +1,7 @@
 ARCH=$(uname -o)
 
 is_mac() {
-	return test "${ARCH}" = "Darwin"
+	return $(test "${ARCH}" = "Darwin")
 }
 
 sha256sh() {
@@ -112,16 +112,16 @@ cache() {
 
 	case "$1" in
 	"set") 
-		pc_delete "^${unique}${sep}${key}" "${cache_file}"
+		pc_delete "${unique}${sep}${key}${sep}" "${cache_file}"
 		echo "${unique}${sep}${key}${sep}${value}" >> "${cache_file}"
 		;;
 	"get")
-		line="$(cat "${cache_file}" | grep "${unique}${sep}${key}")"
+		line="$(cat "${cache_file}" | grep "^${unique}${sep}${key}${sep}")"
 		value="$(echo "${line}" | cut -d"${sep}" -f3)"
 		base_decode ${value}
 		;;
 	"del")
-		pc_delete "^${unique}${sep}${key}" "${cache_file}"
+		pc_delete "${unique}${sep}${key}${sep}" "${cache_file}"
 		;;
 	esac
 
