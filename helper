@@ -1,0 +1,144 @@
+ARCH=$(uname -o)
+
+is_mac() {
+	return test "${ARCH}" = "Darwin"
+}
+
+sha256sh() {
+	(is_mac && shasum -a 256 "${1}" || sha256sum "${1}") | awk '{print$1}'
+}
+
+# 通过传入一个字符串，取变量名称等于该字符串的变量值
+parse_str() {
+	[ -z "${1}" ] && echo -n "" || eval echo -n '$'"${1}"
+}
+
+base_encode() {
+	[ -z "${1}" ] && return
+	echo -n "$*" | base64 | tr -d '\n'
+}
+
+base_decode() {
+	[ -z "${1}" ] && echo -n "" 
+	echo -n "$*" | base64 -d
+}
+
+# $1 > $2 => 1
+# $1 < $2 => -1
+# $1 = $2 => 0
+versioncmp() {
+
+	[ "$1" = "$2" ] && return 0
+
+	if test "$(echo "$@" | tr " " "\n" | sort | head -n 1)" != "$1"; then
+		return "-1"
+	else 
+		return "1"
+	fi
+
+}
+
+# Asuswrt-Merlin helper functions
+# For use with Postconf scripts (and others)
+
+_quote() {
+	echo $1 | sed 's/[]\/()$*.^|[]/\\&/g'
+}
+
+# This function looks for a string, and inserts a specified string after it inside a given file
+# $1: the line to locate, $2: the line to insert, $3: Config file where to insert
+pc_insert() {
+	PATTERN=$(_quote "$1")
+	CONTENT=$(_quote "$2")
+	if is_mac; then
+		sed -i "" "/$PATTERN/a$CONTENT" $3
+	else
+		sed -i "/$PATTERN/a$CONTENT" $3
+	fi
+}
+
+# This function looks for a string, and replace it with a different string inside a given file
+# $1: the line to locate, $2: the line to replace with, $3: Config file where to insert
+pc_replace() {
+	PATTERN=$(_quote "$1")
+	CONTENT=$(_quote "$2")
+	if is_mac; then
+		sed -i "" "s/$PATTERN/$CONTENT/" $3
+	else
+		sed -i "s/$PATTERN/$CONTENT/" $3
+	fi
+}
+
+# This function will append a given string at the end of a given file
+# $1 The line to append at the end, $2: Config file where to append
+pc_append() {
+	echo "$1" >> $2
+}
+
+# This function will delete a line containing a given string inside a given file
+# $1 The line to locate, $2: Config file where to delete
+pc_delete() {
+	PATTERN=$(_quote "$1")
+	if is_mac; then
+		sed -i "" "/$PATTERN/d" $2
+	else
+		sed -i "/$PATTERN/d" $2
+	fi
+}
+
+assert_nil() {
+	local err_msg="${1}"
+	local value="${2}"
+	[ -z "${value}" ] && echo "${err_msg}" && return 1
+	return 0
+}
+
+# <set/get/del> key [value]
+# CACHE_FILE CACHE_UNIQUE
+cache() {
+
+	assert_nil "CACHE_FILE can not be null!" "${CACHE_FILE}" || return 1
+	assert_nil "CACHE_UNIQUE cant not be null!" "${CACHE_UNIQUE}" || return 1
+	local unique="$(base_encode ${CACHE_UNIQUE})"
+	local cache_file="${CACHE_FILE}"
+	local key="$2"
+	local value="$(base_encode ${3})"
+	local sep="${CACHE_SEP:-|}"
+	local line
+	if [ ! -f "${cache_file}" ]; then
+		touch ${cache_file} || return 1
+	fi
+	assert_nil "key can not be null!" "${key}" || return 1
+
+	case "$1" in
+	"set") 
+		pc_delete "^${unique}${sep}${key}" "${cache_file}"
+		echo "${unique}${sep}${key}${sep}${value}" >> "${cache_file}"
+		;;
+	"get")
+		line="$(cat "${cache_file}" | grep "${unique}${sep}${key}")"
+		value="$(echo "${line}" | cut -d"${sep}" -f3)"
+		base_decode ${value}
+		;;
+	"del")
+		pc_delete "^${unique}${sep}${key}" "${cache_file}"
+		;;
+	esac
+
+}
+
+json_get() {
+	[ -z "$1" ] && return
+	local JSON_CONTENT=""
+	local JSON_NAME=""
+	if [ -z "$2" ]; then
+		JSON_FILE=`xargs`
+		JSON_NAME="${1}"
+	else 
+		JSON_FILE="`cat ${1}`"
+		JSON_NAME="${2}"
+	fi
+	echo "${JSON_FILE}" | tr ',' '\n' | grep -Eo '["]{0,1}'${JSON_NAME}'["]{0,1}[ ]*:[ ]*["]{0,1}[^"]*["]{0,1}' | cut -d':' -f2- | sed -E 's/(^ ")|(^")|("$)|(^ )//g'
+}
+
+
