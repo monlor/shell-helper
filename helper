@@ -108,7 +108,7 @@ assert_nil() {
 cache() {
 
 	local key="$2"
-	assert_nil "CACHE_FILE" "CACHE_UNIQUE" "key" && return 1
+	assert_nil "CACHE_FILE" "CACHE_UNIQUE" && return 1
 	local unique="$(base_encode ${CACHE_UNIQUE})"
 	local cache_file="${CACHE_FILE}"
 	local value="$(base_encode ${3})"
@@ -133,9 +133,10 @@ cache() {
 		;;
 	"list")
 		if [ -n "${key}" ]; then
-			cat "${cache_file}" | grep "${key}" | sed -e "s/${key}${sep}//g" | sed -e 's/|/ /'
+			local key_encode="$(base_encode ${key})"
+			cat "${cache_file}" | grep -E "^${key_encode}${sep}" | awk -F '|' '{print$2;system("source helper && base_decode "$3)}' | tr '\n' ' '
 		else
-			cat "${cache_file}" | sed -e "s/^[a-zA-Z0-9_-]${sep}//g" | sed -e 's/|/ /'
+			cat "${cache_file}" | awk -F '|' '{print$2;system("source helper && base_decode "$3)}' | tr '\n' ' '
 		fi
 		;;
 	esac
