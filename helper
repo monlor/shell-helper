@@ -48,8 +48,8 @@ _quote() {
 # This function looks for a string, and inserts a specified string after it inside a given file
 # $1: the line to locate, $2: the line to insert, $3: Config file where to insert
 pc_insert() {
-	PATTERN=$(_quote "$1")
-	CONTENT=$(_quote "$2")
+	PATTERN="$1"
+	CONTENT="$2"
 	if is_mac; then
 		sed -i "" "/$PATTERN/a$CONTENT" $3
 	else
@@ -60,8 +60,8 @@ pc_insert() {
 # This function looks for a string, and replace it with a different string inside a given file
 # $1: the line to locate, $2: the line to replace with, $3: Config file where to insert
 pc_replace() {
-	PATTERN=$(_quote "$1")
-	CONTENT=$(_quote "$2")
+	PATTERN="$1"
+	CONTENT="$2"
 	if is_mac; then
 		sed -i "" "s/$PATTERN/$CONTENT/" $3
 	else
@@ -78,7 +78,7 @@ pc_append() {
 # This function will delete a line containing a given string inside a given file
 # $1 The line to locate, $2: Config file where to delete
 pc_delete() {
-	PATTERN=$(_quote "$1")
+	PATTERN="$1"
 	if is_mac; then
 		sed -i "" "/$PATTERN/d" $2
 	else
@@ -134,9 +134,17 @@ cache() {
 	"list")
 		if [ -n "${key}" ]; then
 			local key_encode="$(base_encode ${key})"
-			cat "${cache_file}" | grep -E "^${key_encode}${sep}" | awk -F '|' '{print$2;system("source helper && base_decode "$3)}' | tr '\n' ' '
+			cat "${cache_file}" | grep -E "^${key_encode}${sep}" | while read line; do
+				key="$(echo "${line}" | cut -d"${sep}" -f2)"
+				value="$(echo "${line}" | cut -d"${sep}" -f3)"
+				echo "${key} $(base_decode "${value}")"
+			done
 		else
-			cat "${cache_file}" | awk -F '|' '{print$2;system("source helper && base_decode "$3)}' | tr '\n' ' '
+			cat "${cache_file}" | while read line; do
+				key="$(echo "${line}" | cut -d"${sep}" -f2)"
+				value="$(echo "${line}" | cut -d"${sep}" -f3)"
+				echo "${key} $(base_decode "${value}")"
+			done
 		fi
 		;;
 	esac
