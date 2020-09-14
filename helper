@@ -165,4 +165,10 @@ json_get() {
 	echo "${JSON_FILE}" | tr ',' '\n' | grep -Eo '["]{0,1}'${JSON_NAME}'["]{0,1}[ ]*:[ ]*["]{0,1}[^"]*["]{0,1}' | cut -d':' -f2- | sed -E 's/(^ ")|(^")|("$)|(^ )//g'
 }
 
+get_absolute_path() {
+	cd "$(dirname "$1")"; echo -n "$(pwd)"/"$(basename "$1")"
+}
 
+get_absolute_dir() {
+	cd "$(dirname "$1")"; echo -n "$(pwd)"
+}
