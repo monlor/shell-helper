@@ -15,12 +15,20 @@ parse_str() {
 
 base_encode() {
 	[ -z "${1}" ] && return
-	echo -n "$*" | base64 | tr -d '\n'
+	if [ -f "${1}" ]; then
+		base64 "${1}" | tr -d '\n'
+	else
+		echo -n "$*" | base64 | tr -d '\n'
+	fi
 }
 
 base_decode() {
 	[ -z "${1}" ] && echo -n "" 
-	echo -n "$*" | base64 -d
+	if [ -f "${1}" ]; then
+		base64 -d "${1}" | tr -d '\n'
+	else
+		echo -n "$*" | base64 -d
+	fi
 }
 
 # $1 > $2 => 1
@@ -150,20 +158,6 @@ cache() {
 		;;
 	esac
 
-}
-
-json_get() {
-	[ -z "$1" ] && return
-	local JSON_CONTENT=""
-	local JSON_NAME=""
-	if [ -z "$2" ]; then
-		JSON_FILE=`xargs`
-		JSON_NAME="${1}"
-	else 
-		JSON_FILE="`cat ${1}`"
-		JSON_NAME="${2}"
-	fi
-	echo "${JSON_FILE}" | tr ',' '\n' | grep -Eo '["]{0,1}'${JSON_NAME}'["]{0,1}[ ]*:[ ]*["]{0,1}[^"]*["]{0,1}' | cut -d':' -f2- | sed -E 's/(^ ")|(^")|("$)|(^ )//g'
 }
 
 get_absolute_path() {
