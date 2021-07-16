@@ -46,18 +46,18 @@ versioncmp() {
 
 }
 
-# Asuswrt-Merlin helper functions
 # For use with Postconf scripts (and others)
 
 _quote() {
-	echo $1 | sed 's/[]\/()$*.^|[]/\\&/g'
+	# echo $1 | sed 's/[]\/()$*.^|[]/\\&/g'
+	echo $1 | sed 's/\//\\\//g'
 }
 
 # This function looks for a string, and inserts a specified string after it inside a given file
 # $1: the line to locate, $2: the line to insert, $3: Config file where to insert
 pc_insert() {
-	PATTERN="$1"
-	CONTENT="$2"
+	PATTERN="$(_quote $1)"
+	CONTENT="$(_quote $2)"
 	if is_mac; then
 		sed -i "" "/$PATTERN/a$CONTENT" $3
 	else
@@ -68,8 +68,8 @@ pc_insert() {
 # This function looks for a string, and replace it with a different string inside a given file
 # $1: the line to locate, $2: the line to replace with, $3: Config file where to insert
 pc_replace() {
-	PATTERN="$1"
-	CONTENT="$2"
+	PATTERN="$(_quote $1)"
+	CONTENT="$(_quote $2)"
 	if is_mac; then
 		sed -i "" "s/$PATTERN/$CONTENT/" $3
 	else
@@ -86,7 +86,7 @@ pc_append() {
 # This function will delete a line containing a given string inside a given file
 # $1 The line to locate, $2: Config file where to delete
 pc_delete() {
-	PATTERN="$1"
+	PATTERN="$(_quote $1)"
 	if is_mac; then
 		sed -i "" "/$PATTERN/d" $2
 	else
@@ -134,7 +134,9 @@ cache() {
 		;;
 	"get")
 		line="$(cat "${cache_file}" | grep "^${unique}${sep}${key}${sep}")"
+		[ -z "${line}" ] && return 0
 		value="$(echo "${line}" | cut -d"${sep}" -f3)"
+		[ -z "${value}" ] && return 0
 		base_decode ${value}
 		;;
 	"del")
@@ -143,7 +145,7 @@ cache() {
 	"list")
 		if [ -n "${key}" ]; then
 			local key_encode="$(base_encode ${key})"
-			cat "${cache_file}" | grep -E "^${key_encode}${sep}" | while read line; do
+			cat "${cache_file}" | grep -r "^${key_encode}${sep}" | while read line; do
 				key="$(echo "${line}" | cut -d"${sep}" -f2)"
 				value="$(echo "${line}" | cut -d"${sep}" -f3)"
 				echo "${key} $(base_decode "${value}")"
